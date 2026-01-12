@@ -5,59 +5,59 @@ import numpy as np
 import cv2
 from PIL import Image
 import os
+import gdown  # Optimized for Google Drive downloads
 
 # -------------------------------
-# Load model (cached, safe)
+# Model Downloading & Loading
 # -------------------------------
 @st.cache_resource
 def load_emotion_model():
-    # Using the path provided in your original file
-    model_path = r"C:\Users\cyber\HumanFaceDetectionProject\full_emotion_model.keras"
+    model_path = "full_emotion_model.keras"
+    
+    # If model doesn't exist on the server, download it
+    if not os.path.exists(model_path):
+        with st.spinner('Downloading model from cloud storage... this may take a moment.'):
+            # Replace with your actual direct download link
+            # For Google Drive: use 'https://drive.google.com/uc?id=FILE_ID'
+            url = "https://drive.google.com/drive/folders/1gd8pl9pPY0XZe4IJV8ho-WNHcnrsWFOf"
+            gdown.download(url, model_path, quiet=False)
+
     model = tf.keras.models.load_model(model_path, compile=False)
     return model
 
 model = load_emotion_model()
-st.success("Emotion model loaded successfully!")
+st.success("Emotion model ready!")
+
 
 # -------------------------------
-# Image Preprocessing Function
+# Image Preprocessing (48x48x3)
 # -------------------------------
 def preprocess_image(uploaded_file):
-    # Load image using PIL
     img = Image.open(uploaded_file)
-    # Convert to grayscale first (if it's already gray, this ensures consistency)
-    img = img.convert('L') 
-    # Resize to 48x48 as required by your model
     img = img.resize((48, 48))
     img_array = np.array(img)
     
-    # FIX: Convert Grayscale (1 channel) to RGB (3 channels) 
-    # This solves the "expected axis -1 to have value 3" error
-    img_rgb = cv2.cvtColor(img_array, cv2.COLOR_GRAY2RGB)
-    
-    # Rescale pixels (usually 0-1 or -1 to 1 depending on your training)
-    img_rgb = img_rgb / 255.0
-    
-    # Add batch dimension: (1, 48, 48, 3)
-    img_batch = np.expand_dims(img_rgb, axis=0)
-    return img_batch
+    # Check if image is grayscale; if so, convert to RGB
+    if len(img_array.shape) == 2 or img_array.shape[2] == 1:
+        img_array = cv2.cvtColor(img_array, cv2.COLOR_GRAY2RGB)
+    elif img_array.shape[2] == 4: # Handle RGBA (transparent) images
+        img_array = cv2.cvtColor(img_array, cv2.COLOR_RGBA2RGB)
+        
+    img_array = img_array / 255.0  # Normalize
+    return np.expand_dims(img_array, axis=0)
 
 # -------------------------------
-# Streamlit UI
+# UI Logic
 # -------------------------------
-st.title("Facial Emotion Recognition")
-uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("Upload a face image", type=["jpg", "png"])
+if uploaded_file:
+    st.image(uploaded_file, caption="Input Image")
+    processed = preprocess_image(uploaded_file)
+    
+    # The model expects (batch, 48, 48, 3)
+    prediction = model.predict(processed)
+    
+    # Emotion labels from your notebook
+    labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
+    st.write(f"## Prediction: {labels[np.argmax(prediction)]}")
 
-if uploaded_file is not None:
-    # Display the uploaded image
-    st.image(uploaded_file, caption='Uploaded Image', use_column_width=True)
-    
-    # Preprocess and Predict
-    processed_img = preprocess_image(uploaded_file)
-    prediction = model.predict(processed_img)
-    
-    # Mapping classes (Update these based on your specific notebook labels)
-    emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
-    result = emotion_labels[np.argmax(prediction)]
-    
-    st.write(f"### Predicted Emotion: {result}")
