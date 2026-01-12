@@ -1,51 +1,3 @@
-# import streamlit as st
-# import tensorflow as tf
-# import cv2
-# import numpy as np
-
-# # 1. Initialize session state variables (Start at the very left)
-# if 'prediction_label' not in st.session_state:
-#     st.session_state.prediction_label = None
-# if 'confidence_score' not in st.session_state:
-#     st.session_state.confidence_score = None
-
-# @st.cache_resource
-# def load_emotion_model():
-#     # Load model once and cache it
-#     return tf.keras.models.load_model("full_emotion_model.keras", compile=False)
-
-# model = load_emotion_model()
-# emotion_labels = ['angry', 'disgust', 'fear', 'happy', 'neutral', 'sad', 'surprise']
-
-# st.title("Human Emotion Detection Web App")
-# uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
-
-# if uploaded_file is not None:
-#     # 1. Decode image
-#     file_bytes = np.frombuffer(uploaded_file.read(), np.uint8)
-#     image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-#     st.image(image, channels="BGR", caption="Uploaded Image")
-
-#     # 2. Preprocess (Model expects 48x48 with 3 channels based on your error)
-#     resized_image = cv2.resize(image, (48, 48))
-#     img_array = resized_image.astype('float32') / 255.0
-#     img_array = np.expand_dims(img_array, axis=0) # Shape: (1, 48, 48, 3)
-
-#     # 3. Prediction Button
-#     if st.button("Predict Emotion"):
-#         with st.spinner('Analyzing...'):
-#             predictions = model.predict(img_array)
-#             max_index = np.argmax(predictions[0])
-            
-#             # Save to session state to prevent disappearing on rerun
-#             st.session_state.prediction_label = emotion_labels[max_index]
-#             st.session_state.confidence_score = predictions[0][max_index] * 100
-
-# # 4. Display Result (Ensure this is at the VERY LEFT margin)
-# if st.session_state.prediction_label:
-#     st.success(f"Result: {st.session_state.prediction_label.upper()}")
-#     st.info(f"Confidence: {st.session_state.confidence_score:.2f}%")
-
 import streamlit as st
 import tensorflow as tf
 import cv2
@@ -72,7 +24,7 @@ def load_emotion_model():
 model = load_emotion_model()
 
 emotion_labels = [
-    'angry', 'disgust', 'fear',
+    'angry', 'fear',
     'happy', 'neutral', 'sad', 'surprise'
 ]
 
@@ -98,14 +50,17 @@ if uploaded_file is not None:
 
     # 3. Preprocess for the model (Grayscale + Resize to 48x48)
     # This matches the training requirements in your notebook
-    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    #gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    gray_image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)        
     resized_image = cv2.resize(gray_image, (48, 48))
-    
+    # Expand dimensions to match the model's expected batch format (1, 48, 48, 3)
+    input_data = tf.expand_dims(gray_image, axis=0) 
+
     # 4. Normalize and Reshape
     # Convert to float32, scale to [0, 1], and add batch/channel dimensions
-    img_array = resized_image.astype('float32') / 255.0
-    img_array = np.expand_dims(img_array, axis=0)  # Becomes (1, 48, 48)
-    img_array = np.expand_dims(img_array, axis=-1) # Becomes (1, 48, 48, 3)
+   # img_array = resized_image.astype('float32') / 255.0
+   # img_array = np.expand_dims(img_array, axis=0)  # Becomes (1, 48, 48)
+   # img_array = np.expand_dims(img_array, axis=-1) # Becomes (1, 48, 48, 3)
 
     # 5. Prediction
     if st.button("Predict Emotion"):
@@ -135,6 +90,7 @@ if uploaded_file is not None:
 if st.session_state.prediction_label:
    st.success(f"Result: {st.session_state.prediction_label.upper()}")
    st.info(f"Confidence: {st.session_state.confidence_score:.2f}%")
+
 
 
 
