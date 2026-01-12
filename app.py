@@ -2,6 +2,8 @@ import streamlit as st
 import tensorflow as tf
 import cv2
 import numpy as np
+from tensorflow.keras.models import load_model
+import os
 
 # 1. Initialize session state variables at the top
 # This prevents them from being reset every time the script reruns
@@ -15,11 +17,26 @@ if 'confidence_score' not in st.session_state:
 # -------------------------------
 @st.cache_resource
 def load_emotion_model():
+    # Using a raw string (r"") to handle Windows backslashes correctly
+    model_path = r"C:\Users\cyber\HumanFaceDetectionProject\full_emotion_model.keras"
+    
     model = tf.keras.models.load_model(
-        "full_emotion_model.keras",
+        model_path,
         compile=False
     )
     return model
+
+
+# -------------------------------
+# Load model (cached, safe)
+# -------------------------------
+# @st.cache_resource
+# def load_emotion_model():
+#     model = tf.keras.models.load_model(
+#         "full_emotion_model.keras",
+#         compile=False
+#     )
+#     return model
 
 model = load_emotion_model()
 
@@ -90,6 +107,7 @@ if uploaded_file is not None:
 if st.session_state.prediction_label:
    st.success(f"Result: {st.session_state.prediction_label.upper()}")
    st.info(f"Confidence: {st.session_state.confidence_score:.2f}%")
+
 
 
 
